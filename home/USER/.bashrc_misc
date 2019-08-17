@@ -1,0 +1,246 @@
+#
+# ~/.bashrc_misc
+#
+
+# Functions
+
+# Fetch & print public IP with options for protocol versions & quiet mode
+# e.g. '$ myip -v6 -q'
+myip() {
+	local ipv=4
+	[[ $@ = *6* ]] && ipv=6
+	local ip=$(curl -qs$ipv ifconfig.co)
+	(( $? != 0 )) && ip="0.0.0.0"
+	local msg=""
+	[[ $@ != *q* ]] && msg="Your public IPv$ipv address is "
+	echo "$msg$ip"
+}
+
+function hash_file {
+	echo `md5sum "$1"` > "$1.md5sum";
+	echo `sha1sum "$1"` > "$1.sha1sum";
+	echo `sha256sum "$1"` > "$1.sha256sum";
+	echo "hash: '$1' done"
+}
+
+# TODO Add recursive directory hashing support
+function hash {
+	if (( $# == 1 )); then
+		hash_file "$1"
+	else
+		OLDIFS="$IFS"
+		IFS="
+"
+
+		if (( $# == 0 )); then
+			# TODO Ask to hash everything?
+			for f in `\ls -1 .`; do
+				[ -f "$f" ] && hash_file "$f" # || echo "hash: '$f': No such file"
+			done
+		else
+			for f in $@; do
+				[ -f "$f" ] && hash_file "$f" || echo "hash: '$f': No such file"
+			done
+		fi
+
+		unset f
+		IFS=$OLDIFS
+	fi
+}
+
+# Get absolute path to a directory or file
+# TODO Make handle .. & ./file etc properly
+function path {
+	[[ "$PWD" = *\ * ]] && echo "\"$PWD/$@\"" || echo "$PWD/$@"
+}
+
+# Weather
+function weather {
+	local city="$@" # e.g. "New York"
+	if [ -z "$city" ]; then
+		city="" # TODO: Change your default city here
+	fi
+	curl "wttr.in/$city"
+}
+
+# Simpler zip command
+function zip {
+	if (( $# == 1 )) && [ -r "$1" ]; then
+		local path="${1//\"/\\\”}" # " => \"
+		path="${path//\'/\\\'}" # ' => \'
+		[[ "$path" = */ ]] && path="${path::-1}" # path/ => path
+		[[ "$path" = *" "* ]] && path="'$path'" # pa th => 'pa th'
+		cmd="zip -r ${path%/*}.zip $path"
+		echo "$ $cmd"
+		/usr/bin/$cmd
+	else
+		/usr/bin/zip $@
+	fi
+}
+
+# Turn these on outside chroots when available
+if [[ ! -d /parentroot ]]; then
+	shopt -s xpg_echo       # Make echo expand backslash-escape sequences e.g. "\n"
+	shopt -s progcomp_alias # Try alias expansion for programmable completions
+	shopt -s autocd         # Automatically cd into typed directories (e.g. '/etc' => 'cd /etc')
+fi
+
+
+
+# Aliases
+alias 'a'='alias'
+
+# ls
+a 'll'='ls -l'
+a 'la'='ls -A'
+a 'sl'='ls'
+a 'l'='ls'
+a 'dir'='ls'
+
+# clear
+a 'cls'='clear'
+a 'csl'='clear'
+a 'clr'='clear'
+a 'clera'='clear'
+
+# Python
+a 'py'='python'
+a 'py3'='python3'
+a 'py2'='python2'
+
+# Networking
+a 'traceroute'='tracepath'
+a 'tracert'='tracepath'
+a 'trr'='tracepath'
+a 'trp'='tracepath'
+a 'ifconfig'='ip a'
+a 'ipconfig'='ip a'
+a 'route'='ip route'
+a 'arp'='ip neigh'
+a 'iptunnel'='ip tunnel'
+a 'nameif'='ip link set name'
+a 'ifrename'='nameif'
+a 'ipmaddr'='ip maddr'
+a 'netstat'='ss'
+a 'ns'='ss'
+
+a 'ipv4'='myip 4'
+a 'ipv6'='myip 6'
+a 'my-ip'='myip'
+a 'my_ip'='myip'
+a 'pubip'='myip'
+a 'pub-ip'='myip'
+a 'pub_ip'='myip'
+a 'publicip'='myip'
+a 'public-ip'='myip'
+a 'public_ip'='myip'
+a 'wanip'='myip'
+a 'wan-ip'='myip'
+a 'wan_ip'='myip'
+
+# termbin (e.g. 'cat /etc/fstab | tb')
+if type nc &>/dev/null; then
+	a 'termbin'='nc termbin.com 9999'
+	a 'tb'='termbin'
+fi
+
+# Misc aliases
+a 'grep'='grep --color'          # Colorize output
+a 'egrep'='grep -E'              # -=-
+a 'fgrep'='grep -F'              # -=-
+a 'less'='less -r'
+a 'df'='df -h'                   # Human-readable sizes
+a 'free'='free -m'               # -=-
+a 'dd'='dd status=progress'      # Report progress by default
+a 'mnt'='mount'
+a 'po'='popd'
+a 'pu'='pushd'
+a 'md'='mkdir'
+a 'rd'='rmdir'
+a 'lines'='tokei'
+a 'ecoh'='echo'
+a 'cd..'='cd ..'
+a 'dc'='cd'
+a 'quit'='exit'
+a 'hist'='history | grep'
+a 'more'='less'
+a 'update-mirrors'='sudo reflector --verbose --sort rate --number 25 --fastest 10 --age 24 --protocol https --save /etc/pacman.d/mirrorlist'
+a 'update-grub'='sudo grub-mkconfig -o /boot/grub/grub.cfg'
+a 'reload'='source $HOME/.bash_profile'
+a 'aliases'='alias | sed "s/[^ ]* //" | sed "s/=/ => /"'
+a 'restart'='sudo systemctl reboot'
+a 'suspend'='sudo systemctl suspend'
+a 'hibernate'='sudo systemctl hibernate'
+a 'fastboot'='sudo fastboot'
+a 'hashes'='hash'
+a 'file_hashes'='hash'
+a 'hash_files'='hash'
+a 'wttr'='weather'
+a 'v'='vim'
+
+# i3
+if [ -f $HOME/.config/i3/config ]; then
+	a 'i3c'='vim $HOME/.config/i3/config'
+	a 'i3config'='i3c'
+	a 'i3conf'='i3c'
+fi
+
+if type yay &>/dev/null; then
+	a 'pacman'='yay'
+fi
+
+# Quick hashing aliases e.g. 'md5 file1 file2'
+
+if type rhash &>/dev/null; then
+	algorithms=(crc32c sha3-256 sha3-512) # crc32
+	for alg in ${algorithms[@]}; do
+		a "$alg"="rhash --$alg" # --speed --percents
+	done
+fi
+algorithms=(md5 sha1 sha256 sha512)
+for alg in ${algorithms[@]}; do
+	a "$alg"="$alg"'sum'
+done
+unset algorithms alg
+
+# Point vi => vim if applicable
+if type vim &>/dev/null; then
+	a 'vi'='vim'
+fi
+
+# Point top => htop if applicable
+if type htop &>/dev/null; then
+	a 'top'='htop'
+fi
+
+# Point cmatrix => unimatrix if applicable
+if type unimatrix &>/dev/null; then
+	if ! type cmatrix &>/dev/null; then
+		a 'cmatrix'='unimatrix -s 97'
+	fi
+fi
+
+# VS Code Insiders 'code' alias when stable ver not installed
+if type code-insiders &>/dev/null; then
+	if ! type code &>/dev/null; then
+		a 'code'='code-insiders'
+	fi
+fi
+
+# Rainbow {screen,neo}fetch & lsd when not in a TTY
+if [ "$TERM" != "linux" ]; then
+	if type lsd &>/dev/null; then
+		a 'ls'='lsd'
+	fi
+
+	if type lolcat &>/dev/null; then
+		a 'screenfetch'='screenfetch | lolcat -h 0.65'
+		a 'neofetch'='neofetch | lolcat -h 0.65'
+	fi
+fi
+
+if [ "$TERM" = "linux" ] || [[ `type lsd` != "ls"* ]]; then
+	a 'ls'='ls -h --color' # Colorize output
+fi
+
+unalias a
