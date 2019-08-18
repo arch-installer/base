@@ -10,7 +10,7 @@ if (( $? == 0 )); then
 fi
 
 # Include local user binaries in PATH
-export PATH=$HOME/.local/bin:$HOME/bin:$PATH
+export PATH=$HOME/.local/bin:$PATH
 
 # If not running interactively, don't do anything else
 [[ $- != *i* ]] && return
