@@ -35,6 +35,9 @@ endfunction
 nnoremap q: <nop>
 nnoremap Q <nop>
 
+" Stop entering visual mode on mouse clicks
+set mouse-=a
+
 " Write changes with F2
 call Map('<F2>', ':w<CR>')
 
