@@ -148,6 +148,7 @@ fi
 a 'grep'='grep --color'          # Colorize output
 a 'egrep'='grep -E'              # -=-
 a 'fgrep'='grep -F'              # -=-
+a 'diff'='diff --color'          # -=-
 a 'less'='less -r'
 a 'df'='df -h'                   # Human-readable sizes
 a 'free'='free -m'               # -=-
@@ -228,8 +229,10 @@ if type code-insiders &>/dev/null; then
 fi
 
 # Rainbow {screen,neo}fetch & lsd when not in a TTY
+type lsd &>/dev/null
+lsd_present=$?
 if [ "$TERM" != "linux" ]; then
-	if type lsd &>/dev/null; then
+	if (( $lsd_present == 0 )); then
 		a 'ls'='lsd'
 	fi
 
@@ -239,8 +242,10 @@ if [ "$TERM" != "linux" ]; then
 	fi
 fi
 
-if [ "$TERM" = "linux" ] || [[ `type lsd` != "ls"* ]]; then
+if [ "$TERM" = "linux" ] || (( $lsd_present != 0 )); then
 	a 'ls'='ls -h --color' # Colorize output
 fi
 
+# Clean up
+unset lsd_present
 unalias a
