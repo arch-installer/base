@@ -12,8 +12,13 @@ set shiftwidth=3
 set encoding=utf-8
 
 " Allow local .vimrc's
-set exrc
 set secure
+if filereadable(".vimrc")
+	" TODO: Improve to not source other users' vimrc files
+	if $USER != "root"
+		set exrc
+	endif
+endif
 
 " Enable plugins
 filetype plugin on
