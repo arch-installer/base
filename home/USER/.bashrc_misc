@@ -198,6 +198,14 @@ else
 	a 'clean-orphans'='sudo pacman -Rnsc $(pacman -Qtdq)'
 fi
 
+# Quick X.org clipboard aliases, e.g. 'ls -lA | c'
+if type xclip &>/dev/null; then
+	a 'clipboard'='xclip -selection clipboard'
+	a 'clip'='clipboard'
+	a 'copy'='clipboard'
+	a 'c'='clipboard'
+fi
+
 # Quick hashing aliases e.g. 'md5 file1 file2'
 if type rhash &>/dev/null; then
 	algorithms=(crc32c sha3-256 sha3-512) # crc32
