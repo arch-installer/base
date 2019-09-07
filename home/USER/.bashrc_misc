@@ -186,12 +186,19 @@ if [ -f $HOME/.config/i3/config ]; then
 	a 'i3conf'='i3c'
 fi
 
+# Package management
+a 'pac'='pacman'
 if type yay &>/dev/null; then
+	a 'upgrade'='yay -Syyu --noconfirm'
+	a 'clean-orphans'='yay -Rnsc $(yay -Qtdq)'
+	a 'yaourt'='yay'
 	a 'pacman'='yay'
+else
+	a 'upgrade'='sudo pacman -Syyu --noconfirm'
+	a 'clean-orphans'='sudo pacman -Rnsc $(pacman -Qtdq)'
 fi
 
 # Quick hashing aliases e.g. 'md5 file1 file2'
-
 if type rhash &>/dev/null; then
 	algorithms=(crc32c sha3-256 sha3-512) # crc32
 	for alg in ${algorithms[@]}; do

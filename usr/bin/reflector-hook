@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.bak
+reflector --verbose --sort rate --number 25 --fastest 10 --age 24 --protocol https --save /etc/pacman.d/mirrorlist
+echo "reflector.hook: Please remember to run 'pacman -Syy' manually soon!"

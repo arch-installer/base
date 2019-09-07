@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Upgrade
+Type = Package
+Target = pacman-mirrorlist
+
+[Action]
+Description = Refreshing local mirrors using reflector...
+When = PostTransaction
+Exec = /usr/bin/reflector-hook
+Depends = reflector
