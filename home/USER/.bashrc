@@ -4,13 +4,13 @@
 
 # Make sure ccache is not missed
 which ccache &>/dev/null
-if (( $? == 0 )); then
+if (( $? == 0 )) && [[ "$PATH" != *"ccache"* ]]; then
 	export PATH=/usr/lib/ccache/bin:$PATH
 	export USE_CCACHE=1
 fi
 
 # Include local user binaries in PATH
-export PATH=$HOME/.local/bin:$PATH
+[[ "$PATH" != *".local/bin"* ]] && export PATH=$HOME/.local/bin:$PATH
 
 # If not running interactively, don't do anything else
 [[ $- != *i* ]] && return
@@ -35,6 +35,7 @@ unset user_col
 
 # Load additional functions & aliases
 [[ -e ~/.bashrc_misc ]] && . ~/.bashrc_misc
+[[ -e ~/.bash_aliases ]] && . ~/.bash_aliases
 
 # less & man pages colors
 export LESS_TERMCAP_mb=$(printf '\e[01;31m') # enter blinking mode - red

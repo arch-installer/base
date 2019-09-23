@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# A safer dd command
+
+# TODO: Add '-f' / '--force' flag to override these prompts & pass everything (excluding the flag) straight to /usr/bin/dd
+
+# Constants
+size_fancy_letters=('B' 'K' 'M' 'G' 'T' 'P')
+
+# Variables
+args="$@"
+mounts=$(cat /etc/mtab | cut -d" " -f1 | grep "^/" | cut -d"/" -f3) # e.g. 'nvme0n1p1', 'sdb1', ...
+mounted=0 # Was the output volume mounted?
+size=-1 # e.g. 15682240512
+size_fancy="" # e.g. '16G'
+pars="" # e.g. '/run/media/...'
+
+# Warn about something & wait for confirmation to continue
+# $1 = 'currently mounted'
+# $2 = 'unmount the volume & '
+function warn() {
+	echo -e "\033[1;33mWARNING: \033[0mThe output volume \033[1;36m$par\033[0m (\033[1;35m$size_fancy\033[0m) is $1, the command may not have been intended."
+	printf "Do you want to $2continue anyway (\033[1;31my\033[0m/\033[1;32mN\033[0m)? "
+	read ans
+	ans="${ans^^}" # Convert to upper case
+	ans=$(echo ${ans/YES/Y} | xargs) # 'yes' => 'y'
+	[ "$ans" != "Y" ] && return 1 || return 0
+}
+
+# Updates the fancy size from raw bytes e.g. 15682240512 => '16G'
+function update_fancy_size() {
+	for i in {0..5}; do
+		tmp_size=$(( $size / (1000 ** $i) ))
+		if (( $tmp_size < 1000 )); then
+			unit="${size_fancy_letters[$i]}" # e.g. 'G'
+			scale=0
+			(( $i > 2)) && scale=1
+			size_fancy=$( bc -l <<< "scale = $scale; $size / $(( 1000 ** $i ))" ) # e.g. '15.6'
+			size_fancy+="$unit" # e.g. '15.6G'
+			break
+		fi
+	done
+}
+
+# Get mounted status of output disk
+for arg in $@; do
+	# e.g. 'of=/dev/sdb'
+	if echo "$arg" | grep "^of=" > /dev/null; then
+		parts=(${arg//\// }) # e.g. 'of='', 'dev', 'sdb'
+		par="${parts[2]}" # e.g. 'sdb'
+		if printf "%s\n" ${mounts[@]} | grep -P "^$par" > /dev/null; then
+			mounted=1
+			break
+		fi
+	fi
+done
+
+# Calculate volume size & get mounted partitions
+if [ ! -z "$par" ]; then
+	pars=$(lsblk | grep $par | awk -F ' ' '{print $7}' | grep ^/)
+	size=$(fdisk -l 2> /dev/null | grep $par | head -1 | awk -F ' ' '{print $5}')
+	update_fancy_size
+fi
+
+# Output disk mounted, show warning
+if (( $mounted == 1 )); then
+	warn "currently mounted" "unmount the volume & "
+	(( $? != 0 )) && exit 1
+fi
+
+# Report progress by default
+[[ "$@" = *"status="* ]] || args+=" status=progress"
+args=$(echo "$args" | xargs)
+
+# SIMULATE SIZE FOR TESTING PURPOSES!!!!
+size=10737420000
+update_fancy_size
+
+# Size warnings (output volume)
+if (( $size != -1 )); then
+	# (( $mounted == 0 )) && 
+	if (( $size < 1000000000 )); then
+		warn "unusually small"
+		(( $? != 0 )) && exit 1
+	elif (( $size > 32000000000 )); then # > 32 GB
+		warn "unusually large"
+		(( $? != 0 )) && exit 1
+	fi
+
+	# Unmount & continue
+	for par in $pars; do
+		echo -e "\033[1;31m#\033[0m umount '$par'"
+		sudo /usr/bin/umount "$par"
+	done
+
+	# Show executed command
+	echo -e "\033[1;31m#\033[0m dd $args"
+fi
+
+# And so it begins...
+sudo /usr/bin/dd $args

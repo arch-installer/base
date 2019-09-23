@@ -104,7 +104,7 @@ if $TERM !~ 'linux'
 	colorscheme molokai
 
 	" Powerline
-	if isdirectory('/usr/lib/python3.7/site-packages/powerline/')
+	if $SSH_TTY == '' && isdirectory('/usr/lib/python3.7/site-packages/powerline/')
 		set rtp+=/usr/lib/python3.7/site-packages/powerline/bindings/vim/
 		set laststatus=2
 	endif

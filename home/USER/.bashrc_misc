@@ -2,6 +2,13 @@
 # ~/.bashrc_misc
 #
 
+# Turn these on outside chroots when available
+if [[ ! -d /parentroot ]]; then
+	shopt -s xpg_echo       # Make echo expand backslash-escape sequences e.g. "\n"
+	shopt -s progcomp_alias # Try alias expansion for programmable completions
+	shopt -s autocd         # Automatically cd into typed directories (e.g. '/etc' => 'cd /etc')
+fi
+
 # Functions
 
 # Fetch & print public IP with options for protocol versions & quiet mode
@@ -16,46 +23,14 @@ myip() {
 	echo "$msg$ip"
 }
 
-function hash_file {
-	echo `md5sum "$1"` > "$1.md5sum";
-	echo `sha1sum "$1"` > "$1.sha1sum";
-	echo `sha256sum "$1"` > "$1.sha256sum";
-	echo "hash: '$1' done"
-}
-
-# TODO Add recursive directory hashing support
-function hash {
-	if (( $# == 1 )); then
-		hash_file "$1"
-	else
-		OLDIFS="$IFS"
-		IFS="
-"
-
-		if (( $# == 0 )); then
-			# TODO Ask to hash everything?
-			for f in `\ls -1 .`; do
-				[ -f "$f" ] && hash_file "$f" # || echo "hash: '$f': No such file"
-			done
-		else
-			for f in $@; do
-				[ -f "$f" ] && hash_file "$f" || echo "hash: '$f': No such file"
-			done
-		fi
-
-		unset f
-		IFS=$OLDIFS
-	fi
-}
-
 # Get absolute path to a directory or file
 # TODO Make handle .. & ./file etc properly
-function path {
+path() {
 	[[ "$PWD" = *\ * ]] && echo "\"$PWD/$@\"" || echo "$PWD/$@"
 }
 
 # Weather
-function weather {
+weather() {
 	local city="$@" # e.g. "New York"
 	if [ -z "$city" ]; then
 		city="" # TODO: Change your default city here
@@ -63,31 +38,17 @@ function weather {
 	curl "wttr.in/$city"
 }
 
-# Simpler zip command
-function zip {
-	if (( $# == 1 )) && [ -r "$1" ]; then
-		local path="${1//\"/\\\”}" # " => \"
-		path="${path//\'/\\\'}" # ' => \'
-		[[ "$path" = */ ]] && path="${path::-1}" # path/ => path
-		[[ "$path" = *" "* ]] && path="'$path'" # pa th => 'pa th'
-		cmd="zip -r ${path%/*}.zip $path"
-		echo "$ $cmd"
-		/usr/bin/$cmd
+# tty-clock defaults
+tty-clock() {
+	if (( $# == 0 )); then
+		/usr/bin/tty-clock -scrnB
 	else
-		/usr/bin/zip $@
+		/usr/bin/tty-clock $@
 	fi
 }
 
-# Turn these on outside chroots when available
-if [[ ! -d /parentroot ]]; then
-	shopt -s xpg_echo       # Make echo expand backslash-escape sequences e.g. "\n"
-	shopt -s progcomp_alias # Try alias expansion for programmable completions
-	shopt -s autocd         # Automatically cd into typed directories (e.g. '/etc' => 'cd /etc')
-fi
-
-
-
 # Aliases
+
 alias 'a'='alias'
 
 # ls
@@ -102,6 +63,7 @@ a 'cls'='clear'
 a 'csl'='clear'
 a 'clr'='clear'
 a 'clera'='clear'
+a 'claer'='clear'
 
 # Python
 a 'py'='python'
@@ -152,7 +114,6 @@ a 'diff'='diff --color'          # -=-
 a 'less'='less -r'
 a 'df'='df -h'                   # Human-readable sizes
 a 'free'='free -m'               # -=-
-a 'dd'='dd status=progress'      # Report progress by default
 a 'mnt'='mount'
 a 'po'='popd'
 a 'pu'='pushd'
@@ -166,7 +127,6 @@ a 'quit'='exit'
 a 'hist'='history | grep'
 a 'more'='less'
 a 'update-mirrors'='sudo reflector --verbose --sort rate --number 25 --fastest 10 --age 24 --protocol https --save /etc/pacman.d/mirrorlist'
-a 'update-grub'='sudo grub-mkconfig -o /boot/grub/grub.cfg'
 a 'reload'='source $HOME/.bash_profile'
 a 'aliases'='alias | sed "s/[^ ]* //" | sed "s/=/ => /"'
 a 'restart'='sudo systemctl reboot'
@@ -178,6 +138,16 @@ a 'file_hashes'='hash'
 a 'hash_files'='hash'
 a 'wttr'='weather'
 a 'v'='vim'
+a 'ivm'='vim'
+a 'dd'='safe-dd'
+a 'zip'='simple-zip'
+
+# tty-clock aliases
+if type tty-clock &>/dev/null; then
+	a 'tui-clock'='tty-clock'
+	a 'cli-clock'='tty-clock'
+	a 'clock'='tty-clock'
+fi
 
 # i3
 if [ -f $HOME/.config/i3/config ]; then
@@ -203,21 +173,9 @@ if type xclip &>/dev/null; then
 	a 'clipboard'='xclip -selection clipboard'
 	a 'clip'='clipboard'
 	a 'copy'='clipboard'
+	a 'cb'='clipboard'
 	a 'c'='clipboard'
 fi
-
-# Quick hashing aliases e.g. 'md5 file1 file2'
-if type rhash &>/dev/null; then
-	algorithms=(crc32c sha3-256 sha3-512) # crc32
-	for alg in ${algorithms[@]}; do
-		a "$alg"="rhash --$alg" # --speed --percents
-	done
-fi
-algorithms=(md5 sha1 sha256 sha512)
-for alg in ${algorithms[@]}; do
-	a "$alg"="$alg"'sum'
-done
-unset algorithms alg
 
 # Point vi => vim if applicable
 if type vim &>/dev/null; then
@@ -243,10 +201,10 @@ if type code-insiders &>/dev/null; then
 	fi
 fi
 
-# Rainbow {screen,neo}fetch & lsd when not in a TTY
+# Rainbow {screen,neo}fetch & lsd when not in a TTY (or SSH session)
 type lsd &>/dev/null
 lsd_present=$?
-if [ "$TERM" != "linux" ]; then
+if [[ "$TERM" != "linux" && -z "$SSH_TTY" ]]; then
 	if (( $lsd_present == 0 )); then
 		a 'ls'='lsd'
 	fi
@@ -257,7 +215,7 @@ if [ "$TERM" != "linux" ]; then
 	fi
 fi
 
-if [ "$TERM" = "linux" ] || (( $lsd_present != 0 )); then
+if [[ "$TERM" = "linux" || ! -z "$SSH_TTY" ]] || (( $lsd_present != 0 )); then
 	a 'ls'='ls -h --color' # Colorize output
 fi
 

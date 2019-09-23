@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# A simpler zip command
+
+if (( $# == 1 )) && [ -r "$1" ]; then
+	path="${1//\"/\\\”}" # " => \"
+	path="${path//\'/\\\'}" # ' => \'
+	[[ "$path" = */ ]] && path="${path::-1}" # path/ => path
+	[[ "$path" = *" "* ]] && path="'$path'" # pa th => 'pa th'
+	cmd="zip -r ${path%/*}.zip $path"
+	echo "$ $cmd"
+	/usr/bin/$cmd
+else
+	/usr/bin/zip $@
+fi
