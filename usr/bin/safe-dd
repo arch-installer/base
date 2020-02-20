@@ -68,6 +68,7 @@ if (( $mounted == 1 )); then
 fi
 
 # Report progress by default
+[[ "$@" = *"bs="* ]] || args+=" bs=4M"
 [[ "$@" = *"status="* ]] || args+=" status=progress"
 args=$(echo "$args" | xargs)
 
