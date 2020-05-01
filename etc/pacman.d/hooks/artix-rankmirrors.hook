@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Upgrade
+Type = Package
+Target = artix-mirrorlist
+
+[Action]
+Description = Sorting local Artix mirrors using rankmirrors...
+When = PostTransaction
+Exec = /usr/bin/artix-rankmirrors-hook
+Depends = rankmirrors

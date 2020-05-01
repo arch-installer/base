@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+ml="/etc/pacman.d/mirrorlist"
+cp $ml $ml.bak
+src="$ml"
+[ -f $ml.pacnew ] && src="$ml.pacnew"
+sed -e '/^Server.*http:/d' -e '/^Server.*ftp/d' -i $src
+rankmirrors -n 10 $src > $ml
+rm -f $ml.pacnew
+echo "artix-rankmirrors-hook: Please remember to run 'pacman -Syyu' manually soon!"
