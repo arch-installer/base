@@ -3,16 +3,20 @@
 
 # TODO: Add '-f' / '--force' flag to override these prompts & pass everything (excluding the flag) straight to /usr/bin/dd
 
-# Constants
-size_fancy_letters=('B' 'K' 'M' 'G' 'T' 'P')
-
 # Variables
 args="$@"
+if [[ "$args" != *"of=/dev/"* ]]; then
+	/usr/bin/dd $args
+	exit $?
+fi
 mounts=$(cat /etc/mtab | cut -d" " -f1 | grep "^/" | cut -d"/" -f3) # e.g. 'nvme0n1p1', 'sdb1', ...
 mounted=0 # Was the output volume mounted?
 size=-1 # e.g. 15682240512
 size_fancy="" # e.g. '16G'
 pars="" # e.g. '/run/media/...'
+
+# Constants
+size_fancy_letters=('B' 'K' 'M' 'G' 'T' 'P')
 
 # Warn about something & wait for confirmation to continue
 # $1 = 'currently mounted'
